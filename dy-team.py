@@ -6,45 +6,57 @@ from planet_wars.battles.tournament import get_map_by_id, run_and_view_battle, T
 
 import pandas as pd
 
-
 class dyBot(Player):
     """
     Example of very simple bot - it send flee from its strongest planet to the weakest enemy/neutral planet
     """
-    radius = 10
+    maxRadius = 10
     def get_attacks(self,game:PlanetWars):#-> List[{"source":Planet,"destination":Planet,"num_of_ships":int}]:
-        PLANET_SHIPS_MINIMUM = 10
 
         enemyPlanetsList = [p for p in game.planets if p.owner == PlanetWars.ENEMY]
         neutralPlanetsList = [p for p in game.planets if p.owner == PlanetWars.NEUTRAL]
         playerPlanetsList = [p for p in game.planets if p.owner == PlanetWars.ME]
 
-        # neutralPlanetsToAttackInRadius = []
-        maxRate = 0
+      
+     
+        ###################################
         attacks = []
-        bestPlanetToAttack = None 
-        for pp in playerPlanetsList:
-            attackObj ={}
+        grades = []
+        for source in playerPlanetsList:
+            attacksCount = 0
+            for p in (neutralPlanetsList + enemyPlanetsList):
+                p_grade_dist = (Planet.distance_between_planets(source, p) * -0.5)
+                p_grade_growth = (p.growth_rate * 0.5)
+                p_grade_cost = (p.num_ships * -0.2)
+                grade =  p_grade_growth + p_grade_cost + p_grade_dist
+                for fleet in game.fleets:
+                    if fleet.owner == game.ME and fleet.destination_planet_id != p.planet_id:
+                        attacksCount += 1
+                if attacksCount < 1 :
+                    grades.append({"source": source, "destination": p,"grade":grade})
+                
+            if len(grades) > 0:
+                grades.sort(key=lambda x: x["grade"], reverse=True)
 
-            for np in neutralPlanetsList:
-                # print(Planet.distance_between_planets(pp,np))
-                # print(Planet.distance_between_planets(pp,np) < radius)
+                attacks.append({"source":grades[0]["source"] , "destination":grades[0]["destination"] , "num_of_ships":(grades[0]["destination"].num_ships + 1) })
+            if len(grades) > 1:
+                attacks.append({"source":grades[1]["source"] , "destination":grades[1]["destination"] , "num_of_ships":(grades[1]["destination"].num_ships + 1) })
+            if len(grades) > 2:
+                attacks.append({"source":grades[2]["source"] , "destination":grades[2]["destination"] , "num_of_ships":(grades[2]["destination"].num_ships + 1) })
 
-                if Planet.distance_between_planets(pp,np) < self.radius :
-                    # print(np.growth_rate,np.num_ships)
-                    if np.num_ships>0 and maxRate < np.growth_rate / np.num_ships :
-                        
-                        maxRate = np.growth_rate / np.num_ships
-                        print(maxRate)
-                        if pp.num_ships > PLANET_SHIPS_MINIMUM and pp.num_ships > np.num_ships:
-                            attackObj = { "source": pp , "destination": np, "num_of_ships": np.num_ships + 1 }
-            attacks.append(attackObj)
-        if attacks == []:
-            self.radius+=5
+        for fleet in game.fleets:
+            if fleet.owner == game.ENEMY:
+                dest = PlanetWars.get_planet_by_id(game, fleet.destination_planet_id)
+                distFleetToDest = fleet.turns_remaining
+                # num_ships = fleet.num_ships + 1  
+                for source in PlanetWars.get_planets_by_owner(game, game.ME) :
+                    if (distFleetToDest == Planet.distance_between_planets(dest, source) - 1) and (dest.owner != game.ENEMY):
+                        attacks.append({"source": source, "destination": dest, "num_of_ships": dest.growth_rate + fleet.num_ships + 2})
+         
+                if dest.owner == game.ME:
+                    attacks.append({"source": source, "destination": dest, "num_of_ships": dest.growth_rate + fleet.num_ships + 2})
 
-            
         return attacks
-
 
     def get_planets_to_attack(self, game: PlanetWars) -> List[Planet]:
         """
@@ -149,7 +161,7 @@ def view_bots_battle():
     Requirements: Java should be installed on your device.
     """
     map_str = get_random_map()
-    run_and_view_battle(dyBot(), AttackEnemyWeakestPlanetFromStrongestBot(), map_str)
+    run_and_view_battle(dyBot(), ETerror(), map_str)
 
 
 def check_bot():
