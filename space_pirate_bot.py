@@ -33,7 +33,7 @@ class SpacePirateBot(Player):
 
     #     return math.dist([planetA.x, planetA.y], [planetB.x, planetB.y])
 
-    def ideal_planet_to_attack(self, planets: list[Planet], origin_planet: Planet) -> Planet:
+    def ideal_planet_to_attack(self, planets: List[Planet], origin_planet: Planet) -> Planet:
         all_planets_ranked = []
         for p in planets:
             # print(f'Num of ships: {p.num_ships}')

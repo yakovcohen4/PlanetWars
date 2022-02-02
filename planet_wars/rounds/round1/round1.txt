@@ -1,0 +1,10 @@
+ETerror-dyBot	dyBot-penguins_bot	penguins_bot-TeamZivBot	TeamZivBot-DreamTeamV1	DreamTeamV1-RhulBot	RhulBot-WizardsBot	WizardsBot-SpacePirateBot	SpacePirateBot-BestBotClass	BestBotClass-dima
+ ETerror	penguins_bot	TeamZivBot	DreamTeamV1	DreamTeamV1	WizardsBot	WizardsBot	SpacePirateBot	dima
+ETerror-penguins_bot	penguins_bot-TeamZivBot	TeamZivBot-DreamTeamV1	DreamTeamV1-WizardsBot	WizardsBot-SpacePirateBot	SpacePirateBot-dima
+ ETerror	TeamZivBot	DreamTeamV1	WizardsBot	WizardsBot	dima
+ETerror-TeamZivBot	TeamZivBot-DreamTeamV1	DreamTeamV1-WizardsBot	WizardsBot-dima
+ ETerror	DreamTeamV1	WizardsBot	WizardsBot
+ETerror-DreamTeamV1	DreamTeamV1-WizardsBot
+ ETerror	WizardsBot
+ETerror-WizardsBot
+ ETerror
