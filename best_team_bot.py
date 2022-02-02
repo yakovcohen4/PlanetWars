@@ -62,7 +62,7 @@ class BestBotClass(Player):
 
         my_strongest_planet = max(my_planets, key=lambda planet: planet.num_ships)
 
-        owner = 0  # 2 if len(my_planets) >= 4 else 0
+        owner = 2 if len(my_planets) >= 6 else 0
 
         planets = game.get_planets_by_owner(owner)
 
