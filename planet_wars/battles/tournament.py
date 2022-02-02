@@ -122,8 +122,8 @@ class Tournament:
                     round_number += 1
 
                     # Create the pairs - each player will play against the player before and after it in the list
-                    pairs = [(next_round_players[i], next_round_players[i + 1]) for i in
-                             range(len(next_round_players) - 1)]
+                    pairs = [(next_round_players[i], next_round_players[(i + 1) % len(next_round_players)]) for i in
+                             range(len(next_round_players))]
                     pairs_str = "\t".join(
                         self._get_player_name(pair[0]) + "-" + self._get_player_name(pair[1]) for pair in pairs
                     )
