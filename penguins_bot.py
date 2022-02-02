@@ -1,13 +1,14 @@
 import random
 from typing import Iterable, List
+from collections import Counter
 
 from planet_wars.planet_wars import Player, PlanetWars, Order, Planet
 from planet_wars.battles.tournament import get_map_by_id, run_and_view_battle, TestBot
-
+from planet_wars.player_bots.baseline_code.baseline_bot import AttackWeakestPlanetFromStrongestBot
 import pandas as pd
 
 
-class AttackWeakestPlanetFromStrongestBot(Player):
+class penguins_bot(Player):
     """
     Example of very simple bot - it send flee from its strongest planet to the weakest enemy/neutral planet
     """
@@ -17,10 +18,30 @@ class AttackWeakestPlanetFromStrongestBot(Player):
         :param game: PlanetWars object representing the map
         :return: The planets we need to attack
         """
+
         return [p for p in game.planets if p.owner != PlanetWars.ME]
 
     def ships_to_send_in_a_flee(self, source_planet: Planet, dest_planet: Planet) -> int:
-        return source_planet.num_ships // 2
+        dist = Planet.distance_between_planets(source_planet, dest_planet)
+        enemy_ships = dest_planet.num_ships
+        growth_rate = dest_planet.growth_rate
+
+        if dest_planet.owner == 0:
+            return enemy_ships + 10
+
+        return enemy_ships + (growth_rate * dist) + 10
+
+    def buildImage(self, game: PlanetWars):
+        homebase = [i for i in game.planets if i.owner == PlanetWars.ME][0]
+        neturalPlantesValue = [
+            i for i in game.planets if i.owner == PlanetWars.NEUTRAL]
+        # print(neturalPlantesValue[0].growth_rate)
+        matches = {}
+        for i in neturalPlantesValue:
+            matches[i.planet_id] = ((Planet.distance_between_planets(
+                homebase, i)*i.growth_rate)*10) - i.num_ships
+        bestMatch = Counter(matches).most_common(1)
+        return PlanetWars.get_planet_by_id(game, bestMatch[0][0])
 
     def play_turn(self, game: PlanetWars) -> Iterable[Order]:
         """
@@ -28,34 +49,47 @@ class AttackWeakestPlanetFromStrongestBot(Player):
         :param game: PlanetWars object representing the map - use it to fetch all the planets and flees in the map.
         :return: List of orders to execute, each order sends ship from a planet I own to other planet.
         """
+
+        # planetToAtt = self.buildImage(game)
+        # print(planetToAtt)
         # (1) If we currently have a fleet in flight, just do nothing.
         if len(game.get_fleets_by_owner(owner=PlanetWars.ME)) >= 1:
             return []
+
+        # game.fleets[0].
+
+        # for fleet in game.fleets:
+        #     if fleet.owner == 2:
+        #         attackedByEnemy =  fleet.destination_planet_id
 
         # (2) Find my strongest planet.
         my_planets = game.get_planets_by_owner(owner=PlanetWars.ME)
         if len(my_planets) == 0:
             return []
-        my_strongest_planet = max(my_planets, key=lambda planet: planet.num_ships)
+        my_strongest_planet = max(
+            my_planets, key=lambda planet: planet.num_ships)
 
         # (3) Find the weakest enemy or neutral planet.
         planets_to_attack = self.get_planets_to_attack(game)
         if len(planets_to_attack) == 0:
             return []
-        enemy_or_neutral_weakest_planet = min(planets_to_attack, key=lambda planet: planet.num_ships)
+        enemy_or_neutral_weakest_planet = min(
+            planets_to_attack, key=lambda planet: planet.num_ships)
 
         # (4) Send half the ships from my strongest planet to the weakest planet that I do not own.
         return [Order(
             my_strongest_planet,
             enemy_or_neutral_weakest_planet,
-            self.ships_to_send_in_a_flee(my_strongest_planet, enemy_or_neutral_weakest_planet)
+            self.ships_to_send_in_a_flee(
+                my_strongest_planet, enemy_or_neutral_weakest_planet)
         )]
 
 
 class AttackEnemyWeakestPlanetFromStrongestBot(AttackWeakestPlanetFromStrongestBot):
     """
-    Same like AttackWeakestPlanetFromStrongestBot but attacks only enemy planet - not neutral planet.
+    Same like penguins_bot but attacks only enemy planet - not neutral planet.
     The idea is not to "waste" ships on fighting with neutral planets.
+
     See which bot is better using the function view_bots_battle
     """
 
@@ -69,10 +103,11 @@ class AttackEnemyWeakestPlanetFromStrongestBot(AttackWeakestPlanetFromStrongestB
 
 class AttackWeakestPlanetFromStrongestSmarterNumOfShipsBot(AttackWeakestPlanetFromStrongestBot):
     """
-    Same like AttackWeakestPlanetFromStrongestBot but with smarter flee size.
+    Same like penguins_bot but with smarter flee size.
     If planet is neutral send up to its population + 5
     If it is enemy send most of your ships to fight!
-    Will it out preform AttackWeakestPlanetFromStrongestBot? see test_bot function.
+
+    Will it out preform penguins_bot? see test_bot function.
     """
 
     def ships_to_send_in_a_flee(self, source_planet: Planet, dest_planet: Planet) -> int:
@@ -96,26 +131,29 @@ def get_random_map():
 def view_bots_battle():
     """
     Runs a battle and show the results in the Java viewer
+
     Note: The viewer can only open one battle at a time - so before viewing new battle close the window of the
     previous one.
     Requirements: Java should be installed on your device.
     """
     map_str = get_random_map()
-    run_and_view_battle(AttackWeakestPlanetFromStrongestBot(), AttackEnemyWeakestPlanetFromStrongestBot(), map_str)
+    run_and_view_battle(penguins_bot(
+    ), AttackEnemyWeakestPlanetFromStrongestBot(), map_str)
 
 
-def test_bot():
+def check_bot():
     """
-    Test AttackWeakestPlanetFromStrongestBot against the 2 other bots.
+    Test penguins_bot against the 2 other bots.
     Print the battle results data frame and the PlayerScore object of the tested bot.
-    So is AttackWeakestPlanetFromStrongestBot worse than the 2 other bots? The answer might surprise you.
+    So is penguins_bot worse than the 2 other bots? The answer might surprise you.
     """
     maps = [get_random_map(), get_random_map()]
-    player_bot_to_test = AttackWeakestPlanetFromStrongestBot()
+    player_bot_to_test = penguins_bot()
     tester = TestBot(
         player=player_bot_to_test,
         competitors=[
-            AttackEnemyWeakestPlanetFromStrongestBot(), AttackWeakestPlanetFromStrongestSmarterNumOfShipsBot()
+            AttackEnemyWeakestPlanetFromStrongestBot(
+            ), AttackWeakestPlanetFromStrongestSmarterNumOfShipsBot()
         ],
         maps=maps
     )
@@ -134,5 +172,5 @@ def test_bot():
 
 
 if __name__ == "__main__":
-    test_bot()
+    check_bot()
     view_bots_battle()

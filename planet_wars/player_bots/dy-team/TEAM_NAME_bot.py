@@ -56,6 +56,7 @@ class AttackEnemyWeakestPlanetFromStrongestBot(AttackWeakestPlanetFromStrongestB
     """
     Same like AttackWeakestPlanetFromStrongestBot but attacks only enemy planet - not neutral planet.
     The idea is not to "waste" ships on fighting with neutral planets.
+
     See which bot is better using the function view_bots_battle
     """
 
@@ -72,6 +73,7 @@ class AttackWeakestPlanetFromStrongestSmarterNumOfShipsBot(AttackWeakestPlanetFr
     Same like AttackWeakestPlanetFromStrongestBot but with smarter flee size.
     If planet is neutral send up to its population + 5
     If it is enemy send most of your ships to fight!
+
     Will it out preform AttackWeakestPlanetFromStrongestBot? see test_bot function.
     """
 
@@ -96,6 +98,7 @@ def get_random_map():
 def view_bots_battle():
     """
     Runs a battle and show the results in the Java viewer
+
     Note: The viewer can only open one battle at a time - so before viewing new battle close the window of the
     previous one.
     Requirements: Java should be installed on your device.
@@ -104,7 +107,7 @@ def view_bots_battle():
     run_and_view_battle(AttackWeakestPlanetFromStrongestBot(), AttackEnemyWeakestPlanetFromStrongestBot(), map_str)
 
 
-def test_bot():
+def check_bot():
     """
     Test AttackWeakestPlanetFromStrongestBot against the 2 other bots.
     Print the battle results data frame and the PlayerScore object of the tested bot.
@@ -134,5 +137,5 @@ def test_bot():
 
 
 if __name__ == "__main__":
-    test_bot()
+    check_bot()
     view_bots_battle()

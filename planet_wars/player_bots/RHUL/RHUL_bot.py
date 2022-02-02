@@ -1,3 +1,4 @@
+import math
 import random
 from typing import Iterable, List
 
@@ -56,6 +57,7 @@ class AttackEnemyWeakestPlanetFromStrongestBot(AttackWeakestPlanetFromStrongestB
     """
     Same like AttackWeakestPlanetFromStrongestBot but attacks only enemy planet - not neutral planet.
     The idea is not to "waste" ships on fighting with neutral planets.
+
     See which bot is better using the function view_bots_battle
     """
 
@@ -72,6 +74,7 @@ class AttackWeakestPlanetFromStrongestSmarterNumOfShipsBot(AttackWeakestPlanetFr
     Same like AttackWeakestPlanetFromStrongestBot but with smarter flee size.
     If planet is neutral send up to its population + 5
     If it is enemy send most of your ships to fight!
+
     Will it out preform AttackWeakestPlanetFromStrongestBot? see test_bot function.
     """
 
@@ -85,6 +88,39 @@ class AttackWeakestPlanetFromStrongestSmarterNumOfShipsBot(AttackWeakestPlanetFr
         return original_num_of_ships
 
 
+class RhulBot(Player):
+
+    def get_planets_to_attack(self, game: PlanetWars) -> List[Planet]:
+        return [p for p in game.planets if p.owner != PlanetWars.ME]
+
+    def find_closest(self, planets, strongest):
+        closest_planet = Planet(1000, 5, 3, 0, 100.0, 100.0)
+        for p in planets:
+            closest_planet = p if Planet.distance_between_planets(strongest, p) < Planet.distance_between_planets(strongest, closest_planet) else closest_planet
+        return closest_planet
+
+    def ships_to_send(self, planet, strongest):
+        return planet.num_ships + 1
+
+    def play_turn(self, game: PlanetWars) -> Iterable[Order]:
+        # (1) Find my strongest planet.
+        my_planets = game.get_planets_by_owner(owner=PlanetWars.ME)
+        if len(my_planets) == 0:
+            return []
+        my_strongest_planet = max(my_planets, key=lambda planet: planet.num_ships)
+        planets_to_attack = self.get_planets_to_attack(game)
+
+        # (2) Find closest and weakest planet to attack
+        closest_to_attack = self.find_closest(planets_to_attack, my_strongest_planet)
+
+        # Return the orders
+        return [Order(
+            my_strongest_planet,
+            closest_to_attack,
+            self.ships_to_send(closest_to_attack, my_strongest_planet)
+        )]
+
+
 def get_random_map():
     """
     :return: A string of a random map in the maps directory
@@ -96,26 +132,27 @@ def get_random_map():
 def view_bots_battle():
     """
     Runs a battle and show the results in the Java viewer
+
     Note: The viewer can only open one battle at a time - so before viewing new battle close the window of the
     previous one.
     Requirements: Java should be installed on your device.
     """
     map_str = get_random_map()
-    run_and_view_battle(AttackWeakestPlanetFromStrongestBot(), AttackEnemyWeakestPlanetFromStrongestBot(), map_str)
+    run_and_view_battle(RhulBot(), AttackEnemyWeakestPlanetFromStrongestBot(), map_str)
 
 
-def test_bot():
+def check_bot():
     """
     Test AttackWeakestPlanetFromStrongestBot against the 2 other bots.
     Print the battle results data frame and the PlayerScore object of the tested bot.
     So is AttackWeakestPlanetFromStrongestBot worse than the 2 other bots? The answer might surprise you.
     """
     maps = [get_random_map(), get_random_map()]
-    player_bot_to_test = AttackWeakestPlanetFromStrongestBot()
+    player_bot_to_test = RhulBot()
     tester = TestBot(
         player=player_bot_to_test,
         competitors=[
-            AttackEnemyWeakestPlanetFromStrongestBot(), AttackWeakestPlanetFromStrongestSmarterNumOfShipsBot()
+            AttackWeakestPlanetFromStrongestBot(), AttackWeakestPlanetFromStrongestSmarterNumOfShipsBot()
         ],
         maps=maps
     )
@@ -134,5 +171,5 @@ def test_bot():
 
 
 if __name__ == "__main__":
-    test_bot()
+    check_bot()
     view_bots_battle()

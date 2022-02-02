@@ -1,3 +1,6 @@
+from asyncio.proactor_events import constants
+from math import ceil
+from pprint import pprint
 import random
 from typing import Iterable, List
 
@@ -5,6 +8,65 @@ from planet_wars.planet_wars import Player, PlanetWars, Order, Planet
 from planet_wars.battles.tournament import get_map_by_id, run_and_view_battle, TestBot
 
 import pandas as pd
+
+RELEVANT_PLANET_AMOUNT = 5
+
+class TeamZivBot(Player):
+    def get_planets_to_attack(self, game: PlanetWars) -> List[Planet]:
+        return [p for p in game.planets if p.owner != PlanetWars.ME] # all not me planets
+
+    def get_ship_in_radius(self, game: PlanetWars,center_planet: Planet, radius: int, owner):
+        planets = [planet for planet in game.planets if planet.owner == owner and Planet.distance_between_planets(planet, center_planet) <= radius]
+        planets.sort(key = lambda planet: planet.distance_between_planets(planet,center_planet))
+        return planets
+
+    def defend(self,game: PlanetWars):
+        for enemy_fleet in game.get_fleets_by_owner(owner=PlanetWars.ENEMY):
+            dest_planet = game.planets[enemy_fleet.destination_planet_id]
+            if(dest_planet.owner != PlanetWars.ME):
+                continue
+            ships_i_will_have = dest_planet.num_ships + enemy_fleet.turns_remaining * dest_planet.growth_rate
+            if(ships_i_will_have > enemy_fleet.num_ships):
+                continue # bad attack
+
+            ships_i_need =  enemy_fleet.num_ships - ships_i_will_have
+            all_relevant_planets = self.get_ship_in_radius(game, dest_planet, enemy_fleet.turns_remaining, PlanetWars.ME)
+            print(all_relevant_planets, ships_i_need)
+            if not all_relevant_planets:
+                continue
+            relevant_planets = all_relevant_planets[0:RELEVANT_PLANET_AMOUNT]
+            total_relevant_ships = sum([planet.num_ships for planet in relevant_planets])
+
+            return [Order(planet,dest_planet,ceil((ships_i_need / total_relevant_ships) * planet.num_ships)) for planet in relevant_planets]
+        return []
+
+    def me_planets(self, game: PlanetWars):
+        planets = [planet for planet in game.planets if planet.owner == PlanetWars.ME]
+        return planets
+
+    def attack(self, game: PlanetWars):
+        if len([flee for flee in game.fleets if flee.owner == PlanetWars.ME]) >= len(game.get_planets_by_owner(PlanetWars.ME)):
+            return []
+        me_planets = self.me_planets(game)
+        not_me_planets = [planet for planet in game.planets if planet.owner != PlanetWars.ME]
+        if len(me_planets) == 0 or len(not_me_planets) == 0:
+            return []
+        strongest_planet = max(me_planets, key = lambda planet: planet.num_ships)
+        closest_planet = min(not_me_planets, key = lambda planet: planet.num_ships + 10*Planet.distance_between_planets(planet, strongest_planet))
+        return [Order(
+            strongest_planet,
+            closest_planet,
+            strongest_planet.num_ships
+        )]
+
+    def play_turn(self, game: PlanetWars) -> Iterable[Order]:
+        order = []
+
+        a = self.attack(game)
+        d = self.defend(game)
+        if (len(d) > 0): order +=d
+        if (len(a) > 0): order +=a
+        return order
 
 
 class AttackWeakestPlanetFromStrongestBot(Player):
@@ -101,17 +163,12 @@ def view_bots_battle():
     Requirements: Java should be installed on your device.
     """
     map_str = get_random_map()
-    run_and_view_battle(AttackWeakestPlanetFromStrongestBot(), AttackEnemyWeakestPlanetFromStrongestBot(), map_str)
+    run_and_view_battle(TeamZivBot(), AttackEnemyWeakestPlanetFromStrongestBot(), map_str)
 
 
-def test_bot():
-    """
-    Test AttackWeakestPlanetFromStrongestBot against the 2 other bots.
-    Print the battle results data frame and the PlayerScore object of the tested bot.
-    So is AttackWeakestPlanetFromStrongestBot worse than the 2 other bots? The answer might surprise you.
-    """
+def check_bot():
     maps = [get_random_map(), get_random_map()]
-    player_bot_to_test = AttackWeakestPlanetFromStrongestBot()
+    player_bot_to_test = TeamZivBot()
     tester = TestBot(
         player=player_bot_to_test,
         competitors=[
@@ -134,5 +191,5 @@ def test_bot():
 
 
 if __name__ == "__main__":
-    test_bot()
+    check_bot()
     view_bots_battle()

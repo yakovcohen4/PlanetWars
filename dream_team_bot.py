@@ -6,6 +6,9 @@ from planet_wars.battles.tournament import get_map_by_id, run_and_view_battle, T
 
 import pandas as pd
 
+GROWTH_MULTIPLIER = 1.0
+DISTANCE_MULTIPLIER = 3.0
+SHIPS_MULTIPLIER = 0.5
 
 class AttackWeakestPlanetFromStrongestBot(Player):
     """
@@ -51,7 +54,6 @@ class AttackWeakestPlanetFromStrongestBot(Player):
             self.ships_to_send_in_a_flee(my_strongest_planet, enemy_or_neutral_weakest_planet)
         )]
 
-
 class AttackEnemyWeakestPlanetFromStrongestBot(AttackWeakestPlanetFromStrongestBot):
     """
     Same like AttackWeakestPlanetFromStrongestBot but attacks only enemy planet - not neutral planet.
@@ -84,6 +86,67 @@ class AttackWeakestPlanetFromStrongestSmarterNumOfShipsBot(AttackWeakestPlanetFr
             return int(source_planet.num_ships * 0.75)
         return original_num_of_ships
 
+class DreamTeamV1(AttackWeakestPlanetFromStrongestBot):
+    """
+    We will attack planets with highest growth rate and lowest ships count
+    """
+    def get_score_for_planet(self, my_planet: Planet, other_planets):
+        scores = []
+        for p in other_planets:
+            distance = p.distance_between_planets(my_planet, p)
+            score = (p.growth_rate * GROWTH_MULTIPLIER)/(p.num_ships*SHIPS_MULTIPLIER + distance*DISTANCE_MULTIPLIER)
+            # print(f'{p.num_ships}, {p.growth_rate}, {distance}, {score}')
+            scores.append({'planet': p, 'score': score})
+        return sorted(scores, key=lambda p: p['score'], reverse=True)
+
+    def get_planets_to_attack(self, game: PlanetWars, planet: Planet):
+        other_planets = [p for p in game.planets if p.owner != PlanetWars.ME]
+        enemy_planet_scores = self.get_score_for_planet(planet, other_planets)
+        # print('#'*10)
+        # print([p['score'] for p in enemy_planet_scores])
+        # print('#'*10)
+        attack_planets = [p['planet'] for p in enemy_planet_scores]
+        return attack_planets
+
+    def create_order(self, game: PlanetWars, planet: Planet, target: Planet):
+        return Order(planet, target, planet.num_ships//2)
+
+    def should_attack(self, game: PlanetWars, planet: Planet, target: Planet):
+        return True
+
+    def get_orders(self, game: PlanetWars):
+        my_planets = game.get_planets_by_owner(PlanetWars.ME)
+        orders = []
+        for planet in my_planets:
+            targets = self.get_planets_to_attack(game, planet)
+            if len(targets) <= 0:
+                continue
+            target = targets[0]
+            if self.should_attack(game, planet, target):
+                orders.append(self.create_order(game, planet, target))
+
+        return [order for order in orders if order]
+
+    def play_turn(self, game: PlanetWars) -> Iterable[Order]:
+        """
+        See player.play_turn documentation.
+        :param game: PlanetWars object representing the map - use it to fetch all the planets and flees in the map.
+        :return: List of orders to execute, each order sends ship from a planet I own to other planet.
+        """
+
+        # (2) Find my strongest planet.
+        my_planets = game.get_planets_by_owner(owner=PlanetWars.ME)
+        if len(my_planets) == 0:
+            return []
+        my_strongest_planet = max(my_planets, key=lambda planet: planet.num_ships)
+
+        # (4) Send half the ships from my strongest planet to the weakest planet that I do not own.
+        return self.get_orders(game)
+
+class DreamTeam(DreamTeamV1):
+
+    def should_attack(self, game: PlanetWars, planet: Planet, target: Planet):
+        return planet.num_ships > target.num_ships
 
 def get_random_map():
     """
@@ -101,10 +164,10 @@ def view_bots_battle():
     Requirements: Java should be installed on your device.
     """
     map_str = get_random_map()
-    run_and_view_battle(AttackWeakestPlanetFromStrongestBot(), AttackEnemyWeakestPlanetFromStrongestBot(), map_str)
+    run_and_view_battle(DreamTeam(), DreamTeamV1(), map_str)
 
 
-def test_bot():
+def check_bot():
     """
     Test AttackWeakestPlanetFromStrongestBot against the 2 other bots.
     Print the battle results data frame and the PlayerScore object of the tested bot.
@@ -115,7 +178,7 @@ def test_bot():
     tester = TestBot(
         player=player_bot_to_test,
         competitors=[
-            AttackEnemyWeakestPlanetFromStrongestBot(), AttackWeakestPlanetFromStrongestSmarterNumOfShipsBot()
+            DreamTeam(), DreamTeamV1()
         ],
         maps=maps
     )
@@ -134,5 +197,5 @@ def test_bot():
 
 
 if __name__ == "__main__":
-    test_bot()
+    check_bot()
     view_bots_battle()

@@ -55,4 +55,6 @@ if __name__ == '__main__':
     print("\n\n")
 
     br = get_battle_results_df(1)
-    view_battle(br, 7)  # 27 & 44
+    view_battle(br, 22)  # 27 & 44
+    # final 22
+    # half - 21, 20
