@@ -55,7 +55,6 @@ class BestBotClass(Player):
         my_planets = game.get_planets_by_owner(owner=PlanetWars.ME)
 
         if len(my_planets) == 0:
-
             return []
 
         # (2) Find my strongest planet.
