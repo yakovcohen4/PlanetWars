@@ -6,6 +6,93 @@ from planet_wars.battles.tournament import get_map_by_id, run_and_view_battle, T
 
 import pandas as pd
 
+class ETerror(Player):
+    """
+    Eterro
+    """
+    def get_planets_to_attack(self, game: PlanetWars) -> List[Planet]:
+        """
+        :param game: PlanetWars object representing the map
+        :return: The planets we need to attack
+        """
+
+        return [p for p in game.planets if p.owner != PlanetWars.ME]
+    
+    def get_my_planets(self, game: PlanetWars) -> List[Planet]:
+        """
+        :param game: PlanetWars object representing the map
+        :return: The planets we need to attack
+        """
+
+        return [p for p in game.planets if p.owner == PlanetWars.ME]
+
+    def calc_fleet(source_planet: Planet, dest_planet: Planet):
+        dis = Planet.distance_between_planets(source_planet, dest_planet)
+        if dest_planet.owner == 2:
+            return dest_planet.num_ships + (dest_planet.growth_rate * dis)
+        return dest_planet.num_ships
+
+    def get_all_planets_list (self, game:PlanetWars):
+        return [p for p in game.planets if p.owner != PlanetWars.ME]
+        
+    def farest_planet_rate(self, game: PlanetWars, source_planet: Planet):
+        distance_key = lambda a: Planet.distance_between_planets(source_planet, a)
+        return sorted(self.get_all_planets_list(game),key=distance_key)
+
+
+    def biggest_growth_rate(self, game: PlanetWars):
+        keyGrowthRate = lambda a:a.growth_rate
+        return sorted(self.get_all_planets_list(game),key=keyGrowthRate)
+        
+    def smallest_planet_fleet(self, game: PlanetWars):
+        key_num_ships = lambda a:a.num_ships
+        return sorted(self.get_all_planets_list(game),key=key_num_ships)
+        
+        
+    def best_option(self, game: PlanetWars, source_planet: Planet)->Planet:
+        distanceList = self.farest_planet_rate(game, source_planet)[::-1]
+        growthList = self.biggest_growth_rate(game)
+        armiesList = self.smallest_planet_fleet(game)[::-1]
+        bestOption = {p: 0 for p in self.get_all_planets_list(game)}
+
+        for index, planet in enumerate(distanceList):
+            bestOption[planet] +=  index
+        for index, planet in enumerate(growthList):
+            bestOption[planet] +=  index    
+        for index, planet in enumerate(armiesList):
+            bestOption[planet] +=  index
+        if bestOption:
+            target = max(bestOption.items(),key= lambda a:a[1])[0]
+            return target
+        return None
+   
+
+    def ships_to_send_in_a_flee(self, source_planet: Planet, dest_planet: Planet) -> int:
+        if dest_planet.owner == 2:
+            dest_ships_num = dest_planet.num_ships + (dest_planet.growth_rate * Planet.distance_between_planets(source_planet, dest_planet)) + 1
+        elif dest_planet.owner == 0:
+            dest_ships_num = dest_planet.num_ships + 1
+        if source_planet.num_ships > dest_ships_num:
+            return dest_ships_num
+        return 0
+
+    def play_turn(self, game: PlanetWars) -> Iterable[Order]:
+        """
+        See player.play_turn documentation.
+        :param game: PlanetWars object representing the map - use it to fetch all the planets and flees in the map.
+        :return: List of orders to execute, each order sends ship from a planet I own to other planet.
+        """
+        orders = []
+        for planet in self.get_my_planets(game):
+            attack_planet = self.best_option(game,planet)
+            if not attack_planet:
+                return []
+            troops = self.ships_to_send_in_a_flee(planet,attack_planet)
+            if troops > 0:
+                orders.append(Order(planet,attack_planet,troops))
+        return orders
+
+
 class dyBot(Player):
     """
     Example of very simple bot - it send flee from its strongest planet to the weakest enemy/neutral planet
